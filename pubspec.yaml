@@ -1,0 +1,36 @@
+name: pocket_pitch
+description: A Flutter cornhole game built with Flame and Riverpod.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Flame game engine
+  flame: ^1.16.0
+  
+  # State management
+  flutter_riverpod: ^2.6.1
+  
+  # Device sensors for gyro input
+  sensors_plus: ^7.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/moon/background.png
+    - assets/images/moon/board.png
+    - assets/images/moon/bag.png
+    - assets/images/boat/background.png
+    - assets/images/boat/board.png
+    - assets/images/boat/bag.png
