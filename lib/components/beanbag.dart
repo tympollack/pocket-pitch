@@ -31,7 +31,7 @@ class ShadowComponent extends PositionComponent {
       ..color = Color.fromRGBO(0, 0, 0, _opacity)
       ..style = PaintingStyle.fill;
     canvas.drawOval(
-      Rect.fromCenter(center: Offset.zero, width: width, height: height),
+      Rect.fromCenter(center: Offset(width / 2, height / 2), width: width, height: height),
       paint,
     );
   }
@@ -201,6 +201,9 @@ class BagComponent extends SpriteComponent with HasGameReference<CornholeGame> {
       return;
     }
 
+    canvas.save();
+    canvas.translate(size.x / 2, size.y / 2);
+
     // Procedural Kenney CC0 Red Fabric Beanbag
     final r = radius;
     final bagPaint = Paint()
@@ -229,5 +232,7 @@ class BagComponent extends SpriteComponent with HasGameReference<CornholeGame> {
     canvas.drawLine(Offset(r * 0.5, -r * 0.5), Offset(r * 0.3, -r * 0.3), stitchPaint);
     canvas.drawLine(Offset(-r * 0.5, r * 0.5), Offset(-r * 0.3, r * 0.3), stitchPaint);
     canvas.drawLine(Offset(r * 0.5, r * 0.5), Offset(r * 0.3, r * 0.3), stitchPaint);
+
+    canvas.restore();
   }
 }

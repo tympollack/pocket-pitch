@@ -176,6 +176,7 @@ class BackgroundComponent extends SpriteComponent {
 class CornholeGame extends FlameGame with PanDetector {
   GameTheme _theme;
   GameTheme get theme => _theme;
+  final bool enableGyroscope;
 
   late BackgroundComponent background;
   late BoardComponent board;
@@ -192,7 +193,10 @@ class CornholeGame extends FlameGame with PanDetector {
   double _panStartTime = 0;
   double _panLastTime = 0;
 
-  CornholeGame({GameTheme initialTheme = GameTheme.moon}) : _theme = initialTheme;
+  CornholeGame({
+    GameTheme initialTheme = GameTheme.moon,
+    this.enableGyroscope = true,
+  }) : _theme = initialTheme;
 
   @override
   Future<void> onLoad() async {
@@ -208,11 +212,18 @@ class CornholeGame extends FlameGame with PanDetector {
     await addAll([background, board, bag, gestureGuide]);
     await setTheme(_theme);
 
-    _gyroSubscription = gyroscopeEventStream().listen((event) {
-      const smoothing = 0.15;
-      currentTilt.x += (event.x - currentTilt.x) * smoothing;
-      currentTilt.y += (event.y - currentTilt.y) * smoothing;
-    });
+    if (enableGyroscope) {
+      try {
+        _gyroSubscription = gyroscopeEventStream().listen(
+          (event) {
+            const smoothing = 0.15;
+            currentTilt.x += (event.x - currentTilt.x) * smoothing;
+            currentTilt.y += (event.y - currentTilt.y) * smoothing;
+          },
+          onError: (_) {},
+        );
+      } catch (_) {}
+    }
   }
 
   @override
@@ -235,11 +246,13 @@ class CornholeGame extends FlameGame with PanDetector {
       background.sprite = Sprite(bgImage);
       board.sprite = Sprite(boardImage);
       bag.sprite = Sprite(bagImage);
+      _theme = newTheme;
     } catch (_) {
-      // Graceful fallback to procedural Kenney tabletop renders
+      // Clear sprites to ensure clean procedural fallback and preserve current theme
+      background.sprite = null;
+      board.sprite = null;
+      bag.sprite = null;
     }
-
-    _theme = newTheme;
   }
 
   // -------------------------------------------------------------------
@@ -254,7 +267,7 @@ class CornholeGame extends FlameGame with PanDetector {
     _panLastPosition = pos.clone();
     _panStartTime = _nowSeconds();
     _panLastTime = _panStartTime;
-    gestureGuide.onPanStart(pos);
+    gestureGuide.onPanStart(pos, _panStartTime);
   }
 
   @override
@@ -263,7 +276,7 @@ class CornholeGame extends FlameGame with PanDetector {
     final pos = info.eventPosition.widget.clone();
     _panLastPosition = pos;
     _panLastTime = _nowSeconds();
-    gestureGuide.onPanUpdate(pos);
+    gestureGuide.onPanUpdate(pos, _panLastTime);
   }
 
   @override

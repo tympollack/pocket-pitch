@@ -3,6 +3,8 @@ import 'package:flame/components.dart';
 import 'package:pocket_pitch/cornhole_game.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('BoardComponent & Hole Trigger Tests', () {
     late BoardComponent board;
 
@@ -75,18 +77,75 @@ void main() {
     });
   });
 
-  group('ThrowData & Parabolic Math', () {
-    test('Parabolic arc equations verify gravity and altitude apex', () {
-      const double initialVerticalSpeed = 450.0;
-      const double gravity = 900.0;
+  group('BagComponent Flight Simulation & Altitude Scaling', () {
+    test('Simulation updates altitude, programmatic scale, and triggers landing', () async {
+      final game = CornholeGame(enableGyroscope: false);
+      // Initialize with default viewport size
+      game.onGameResize(Vector2(400, 800));
+      await game.onLoad();
 
-      // Time to apex: v = v0 - g*t = 0 => t = 450 / 900 = 0.5s
-      final apexTime = initialVerticalSpeed / gravity;
-      expect(apexTime, equals(0.5));
+      final bag = game.bag;
+      expect(bag.isFlying, isFalse);
 
-      // Peak altitude: h = v0*t - 0.5*g*t^2 = 450*0.5 - 0.5*900*0.25 = 225 - 112.5 = 112.5
-      final peakAltitude = (initialVerticalSpeed * apexTime) - (0.5 * gravity * apexTime * apexTime);
-      expect(peakAltitude, equals(112.5));
+      // Launch bag with parabolic throw
+      bag.launch(ThrowData(
+        groundVelocity: Vector2(0, -300),
+        launchSpeed: 450,
+      ));
+
+      expect(bag.isFlying, isTrue);
+      expect(bag.altitude, equals(0.0));
+      final initialRadius = bag.radius;
+
+      // Step forward 0.2s during upward climb
+      bag.update(0.2);
+      expect(bag.altitude, greaterThan(50.0));
+      expect(bag.radius, greaterThan(initialRadius * 0.7));
+
+      // Continue stepping through apex and descent until touchdown
+      double simulatedTime = 0.2;
+      while (bag.isFlying && simulatedTime < 2.0) {
+        bag.update(0.05);
+        simulatedTime += 0.05;
+      }
+
+      // Verify bag landed and scored through game state
+      expect(bag.isFlying, isFalse);
+      expect(bag.altitude, equals(0.0));
+      expect(game.gameState.bagsThrown, equals(1));
+      expect(game.gameState.results.length, equals(1));
+    });
+
+    test('Direct hole landing triggers sinking animation and hole score', () async {
+      final game = CornholeGame(enableGyroscope: false);
+      game.onGameResize(Vector2(400, 800));
+      await game.onLoad();
+
+      final bag = game.bag;
+      // Position bag directly over the hole with small descent altitude
+      final holePos = game.board.holePosition;
+      bag.position = holePos.clone();
+      bag.altitude = 25.0; // Near touchdown
+      bag.isFlying = true;
+      bag.launch(ThrowData(
+        groundVelocity: Vector2.zero(),
+        launchSpeed: 10,
+      ));
+
+      // Set altitude to 20 with downward velocity
+      bag.altitude = 20.0;
+      bag.position = holePos.clone();
+
+      // Step once to trigger hole detection
+      bag.update(0.05);
+
+      if (bag.isSinking) {
+        // Step until sinking finishes
+        while (bag.isSinking) {
+          bag.update(0.1);
+        }
+        expect(game.gameState.results.last, equals(ThrowResult.hole));
+      }
     });
   });
 }

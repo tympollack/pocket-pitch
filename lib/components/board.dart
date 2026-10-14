@@ -85,6 +85,9 @@ class BoardComponent extends SpriteComponent {
       return;
     }
 
+    canvas.save();
+    canvas.translate(size.x / 2, size.y / 2);
+
     // ── Procedural 2.5D Kenney Wooden Cornhole Board Render ──────────────
     final halfW = bottomWidth / 2;
     final halfTopW = topWidth / 2;
@@ -183,5 +186,6 @@ class BoardComponent extends SpriteComponent {
       Rect.fromCenter(center: Offset(hx, hy), width: holeRadius * 2.0, height: holeRadius * 1.4),
       holeRimPaint,
     );
+    canvas.restore();
   }
 }
