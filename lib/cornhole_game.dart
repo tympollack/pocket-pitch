@@ -8,10 +8,12 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'components/board.dart';
 import 'components/beanbag.dart';
 import 'components/gesture_guide.dart';
+import 'components/pitch_particle_emitter.dart';
 
 export 'components/board.dart';
 export 'components/beanbag.dart';
 export 'components/gesture_guide.dart';
+export 'components/pitch_particle_emitter.dart';
 
 /// =====================================================================
 /// ThrowData
@@ -182,6 +184,7 @@ class CornholeGame extends FlameGame with PanDetector {
   late BoardComponent board;
   late BagComponent bag;
   late GestureGuideComponent gestureGuide;
+  late PitchParticleEmitter particleEmitter;
 
   final GameState gameState = GameState();
 
@@ -208,8 +211,9 @@ class CornholeGame extends FlameGame with PanDetector {
     board = BoardComponent(position: Vector2(centerX, size.y * 0.18));
     bag = BagComponent(startPosition: Vector2(centerX, size.y * 0.92));
     gestureGuide = GestureGuideComponent()..priority = 50;
+    particleEmitter = PitchParticleEmitter()..priority = 45;
 
-    await addAll([background, board, bag, gestureGuide]);
+    await addAll([background, board, bag, gestureGuide, particleEmitter]);
     await setTheme(_theme);
 
     if (enableGyroscope) {
@@ -330,5 +334,8 @@ class CornholeGame extends FlameGame with PanDetector {
     ));
   }
 
-  void startNewRound() => gameState.startNewRound();
+  void startNewRound() {
+    particleEmitter.clear();
+    gameState.startNewRound();
+  }
 }
