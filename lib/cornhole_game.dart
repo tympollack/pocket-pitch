@@ -184,7 +184,7 @@ class CornholeGame extends FlameGame with PanDetector {
   late BoardComponent board;
   late BagComponent bag;
   late GestureGuideComponent gestureGuide;
-  late PitchParticleEmitter particleEmitter;
+  PitchParticleEmitter particleEmitter = PitchParticleEmitter()..priority = 45;
 
   final GameState gameState = GameState();
 
@@ -211,7 +211,6 @@ class CornholeGame extends FlameGame with PanDetector {
     board = BoardComponent(position: Vector2(centerX, size.y * 0.18));
     bag = BagComponent(startPosition: Vector2(centerX, size.y * 0.92));
     gestureGuide = GestureGuideComponent()..priority = 50;
-    particleEmitter = PitchParticleEmitter()..priority = 45;
 
     await addAll([background, board, bag, gestureGuide, particleEmitter]);
     await setTheme(_theme);

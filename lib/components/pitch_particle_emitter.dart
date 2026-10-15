@@ -159,11 +159,12 @@ class PitchParticleEmitter extends Component {
         continue;
       }
 
-      p.position.add(p.velocity * dt);
+      // Physics integration with frame-rate independent friction decay (zero allocation)
+      p.position.addScaled(p.velocity, dt);
       if (p.type == PitchParticleType.turfPuff) {
-        p.velocity.scale(0.85); // High air friction for smoke puffs
+        p.velocity.scale(math.pow(0.85, dt * 60).toDouble()); // High air friction for smoke puffs
       } else {
-        p.velocity.scale(0.93); // Low friction for sparks
+        p.velocity.scale(math.pow(0.93, dt * 60).toDouble()); // Low friction for sparks
       }
     }
   }

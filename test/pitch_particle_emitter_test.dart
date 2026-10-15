@@ -1,6 +1,7 @@
 import 'package:flame/components.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocket_pitch/components/pitch_particle_emitter.dart';
+import 'package:pocket_pitch/cornhole_game.dart';
 
 void main() {
   group('PitchParticleEmitter Tests', () {
@@ -59,6 +60,12 @@ void main() {
 
       emitter.clear();
       expect(emitter.activeCount, equals(0));
+    });
+
+    test('CornholeGame can startNewRound before onLoad without throwing', () {
+      final game = CornholeGame(enableGyroscope: false);
+      expect(() => game.startNewRound(), returnsNormally);
+      expect(game.particleEmitter.activeCount, equals(0));
     });
   });
 }
