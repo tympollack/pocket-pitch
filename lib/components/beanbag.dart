@@ -165,6 +165,7 @@ class BagComponent extends SpriteComponent with HasGameReference<CornholeGame> {
         // Cornhole! Passes cleanly through the hole trigger box
         isSinking = true;
         sinkProgress = 0.0;
+        game.particleEmitter.emitStarburst(game.board.holePosition);
         return;
       }
     }
@@ -185,10 +186,12 @@ class BagComponent extends SpriteComponent with HasGameReference<CornholeGame> {
 
     if (board.isFullyInsideHole(position, radius)) {
       result = ThrowResult.hole; // In the hole — 3 pts
+      game.particleEmitter.emitStarburst(board.holePosition);
     } else if (board.containsPoint(position)) {
       result = ThrowResult.onBoard; // On the board — 1 pt
     } else {
       result = ThrowResult.miss; // Touched ground — 0 pts
+      game.particleEmitter.emitTurfPuff(position);
     }
 
     game.gameState.recordThrow(result);
