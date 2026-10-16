@@ -20,7 +20,7 @@ class ShadowComponent extends PositionComponent {
     _opacity = lerpDouble(0.45, 0.08, t)!;
     final widthScale = lerpDouble(1.0, 0.4, t)!;
 
-    position = Vector2(0, altitude);
+    position = Vector2.zero();
     final w = bagRadius * 2 * widthScale;
     size = Vector2(w, w * 0.45);
   }
@@ -158,25 +158,21 @@ class BagComponent extends SpriteComponent with HasGameReference<CornholeGame> {
 
     shadow.updateForAltitude(altitude.clamp(0.0, double.infinity), radius);
 
-    // --- Hole Detection & Landing ---
-    // Check if bag is passing through the hole while descending near board altitude
-    if (!_hasLanded && altitude <= 35.0 && _verticalSpeed <= 0.0) {
+    // Ground touchdown & scoring resolution
+    if (!_hasLanded && altitude <= 0.0 && _verticalSpeed <= 0.0) {
+      altitude = 0.0;
+      velocity = Vector2.zero();
+      _hasLanded = true;
+      shadow.updateForAltitude(0, radius);
+
       if (game.board.isFullyInsideHole(position, radius)) {
-        // Cornhole! Passes cleanly through the hole trigger box
         isSinking = true;
         sinkProgress = 0.0;
         game.particleEmitter.emitStarburst(game.board.holePosition);
         return;
       }
-    }
 
-    // Ground touchdown
-    if (!_hasLanded && altitude <= 0.0 && _verticalSpeed <= 0.0) {
-      altitude = 0.0;
-      velocity = Vector2.zero();
       isFlying = false;
-      _hasLanded = true;
-      shadow.updateForAltitude(0, radius);
       _resolveLanding(game.board);
     }
   }
