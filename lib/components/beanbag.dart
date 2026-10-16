@@ -20,7 +20,7 @@ class ShadowComponent extends PositionComponent {
     _opacity = lerpDouble(0.45, 0.08, t)!;
     final widthScale = lerpDouble(1.0, 0.4, t)!;
 
-    position = Vector2.zero();
+    position = Vector2(bagRadius, bagRadius);
     final w = bagRadius * 2 * widthScale;
     size = Vector2(w, w * 0.45);
   }
