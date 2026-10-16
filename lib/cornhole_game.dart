@@ -251,10 +251,7 @@ class CornholeGame extends FlameGame with PanDetector {
       bag.sprite = Sprite(bagImage);
       _theme = newTheme;
     } catch (_) {
-      // Clear sprites to ensure clean procedural fallback and preserve current theme
-      background.sprite = null;
-      board.sprite = null;
-      bag.sprite = null;
+      // Keep the current sprites and theme when a replacement asset fails.
     }
   }
 

@@ -165,15 +165,17 @@ class BoardComponent extends SpriteComponent {
 
     // Hole Ground Shadow underneath
     final holeShadowPaint = Paint()..color = const Color(0xFF1B1B1B);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(hx, hy + 2), width: holeRadius * 2.1, height: holeRadius * 1.5),
+    canvas.drawCircle(
+      Offset(hx, hy + 2),
+      holeRadius * 1.05,
       holeShadowPaint,
     );
 
     // Hole Void Interior
     final holeInteriorPaint = Paint()..color = const Color(0xFF000000);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(hx, hy), width: holeRadius * 2.0, height: holeRadius * 1.4),
+    canvas.drawCircle(
+      Offset(hx, hy),
+      holeRadius,
       holeInteriorPaint,
     );
 
@@ -182,8 +184,9 @@ class BoardComponent extends SpriteComponent {
       ..color = Colors.white.withValues(alpha: 0.9)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(hx, hy), width: holeRadius * 2.0, height: holeRadius * 1.4),
+    canvas.drawCircle(
+      Offset(hx, hy),
+      holeRadius,
       holeRimPaint,
     );
     canvas.restore();

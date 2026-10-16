@@ -136,16 +136,58 @@ void main() {
       bag.altitude = 20.0;
       bag.position = holePos.clone();
 
-      // Step once to trigger hole detection
-      bag.update(0.05);
-
-      if (bag.isSinking) {
-        // Step until sinking finishes
-        while (bag.isSinking) {
-          bag.update(0.1);
-        }
-        expect(game.gameState.results.last, equals(ThrowResult.hole));
+      // Step until touchdown triggers hole sink
+      while (bag.isFlying && !bag.isSinking) {
+        bag.update(0.05);
       }
+
+      expect(bag.isSinking, isTrue);
+      // Step until sinking finishes
+      while (bag.isSinking) {
+        bag.update(0.1);
+      }
+      expect(game.gameState.results.last, equals(ThrowResult.hole));
+    });
+
+    test('ShadowComponent stays centered at Vector2(bagRadius, bagRadius) across altitudes', () {
+      final shadow = ShadowComponent();
+      shadow.updateForAltitude(0.0, 18.0);
+      expect(shadow.position, equals(Vector2(18.0, 18.0)));
+
+      shadow.updateForAltitude(100.0, 18.0);
+      expect(shadow.position, equals(Vector2(18.0, 18.0)));
+
+      shadow.updateForAltitude(250.0, 18.0);
+      expect(shadow.position, equals(Vector2(18.0, 18.0)));
+    });
+
+    test('Fast bag flying over hole does not trigger sinking mid-air and resolves on landing', () async {
+      final game = CornholeGame(enableGyroscope: false);
+      game.onGameResize(Vector2(400, 800));
+      await game.onLoad();
+
+      final bag = game.bag;
+      final holePos = game.board.holePosition;
+      bag.launch(ThrowData(
+        groundVelocity: Vector2(0, -600),
+        launchSpeed: 10,
+      ));
+      bag.position = holePos.clone();
+      bag.altitude = 30.0;
+
+      bag.update(0.02);
+
+      // Should still be flying, not sinking mid-air
+      expect(bag.isSinking, isFalse);
+      expect(bag.isFlying, isTrue);
+
+      // Step until bag touches down
+      while (bag.isFlying && !bag.isSinking) {
+        bag.update(0.02);
+      }
+
+      expect(bag.isFlying, isFalse);
+      expect(game.gameState.results.isNotEmpty, isTrue);
     });
   });
 }
