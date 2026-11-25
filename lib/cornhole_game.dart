@@ -9,6 +9,7 @@ import 'components/board.dart';
 import 'components/beanbag.dart';
 import 'components/gesture_guide.dart';
 import 'components/pitch_particle_emitter.dart';
+import 'services/asset_registry_service.dart';
 
 export 'components/board.dart';
 export 'components/beanbag.dart';
@@ -241,10 +242,16 @@ class CornholeGame extends FlameGame with PanDetector {
       return;
     }
 
+    final registry = AssetRegistryService.instance;
+    registry.hydrateSeedCatalog();
+    final bgCdnUrl = registry.resolveThemePartUrl(newTheme.name, 'background');
+    final boardCdnUrl = registry.resolveThemePartUrl(newTheme.name, 'board');
+    final bagCdnUrl = registry.resolveThemePartUrl(newTheme.name, 'bag');
+
     try {
-      final bgImage = await images.load(assets.background);
-      final boardImage = await images.load(assets.board);
-      final bagImage = await images.load(assets.bag);
+      final bgImage = await registry.loadCdnImage(bgCdnUrl) ?? await images.load(assets.background);
+      final boardImage = await registry.loadCdnImage(boardCdnUrl) ?? await images.load(assets.board);
+      final bagImage = await registry.loadCdnImage(bagCdnUrl) ?? await images.load(assets.bag);
 
       background.sprite = Sprite(bgImage);
       board.sprite = Sprite(boardImage);

@@ -3,6 +3,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../cornhole_game.dart';
+import '../services/asset_registry_service.dart';
 
 class TrailPoint {
   final Vector2 position;
@@ -22,6 +23,9 @@ class GestureGuideComponent extends Component with HasGameReference<CornholeGame
   double _dragLastTime = 0.0;
   bool _isDragging = false;
   double _idleTime = 0.0;
+
+  PitchFlameSpriteData? get arrowGuideSpriteData =>
+      AssetRegistryService.instance.resolveFlameUiSpriteData('icon-arrow-up');
 
   void onPanStart(Vector2 position, [double? timestamp]) {
     final now = timestamp ?? (DateTime.now().millisecondsSinceEpoch / 1000.0);

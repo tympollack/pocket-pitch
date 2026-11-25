@@ -2,6 +2,8 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
+import '../services/asset_registry_service.dart';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // BoardComponent — 2.5D Angled Cornhole Board with hole cutout
 // Built with Kenney CC0 tabletop board game aesthetic.
@@ -32,6 +34,8 @@ class BoardComponent extends SpriteComponent {
   double get frontEdgeY => position.y + boardHeight / 2;
   double get backEdgeY => position.y - boardHeight / 2;
   Vector2 get holePosition => position + holeOffset;
+  String resolvedBoardAssetUrl([String themeName = 'moon']) =>
+      AssetRegistryService.instance.resolveThemePartUrl(themeName, 'board');
 
   /// Hitbox quad in world space: [nearLeft, nearRight, farRight, farLeft]
   List<Vector2> get hitboxCorners {
