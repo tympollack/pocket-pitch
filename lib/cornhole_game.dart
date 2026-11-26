@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
@@ -202,6 +203,10 @@ class CornholeGame extends FlameGame with PanDetector {
     this.enableGyroscope = true,
   }) : _theme = initialTheme;
 
+  void _handleRegistrySwap() {
+    unawaited(setTheme(_theme));
+  }
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
@@ -214,6 +219,7 @@ class CornholeGame extends FlameGame with PanDetector {
     gestureGuide = GestureGuideComponent()..priority = 50;
 
     await addAll([background, board, bag, gestureGuide, particleEmitter]);
+    AssetRegistryService.instance.swapRevision.addListener(_handleRegistrySwap);
     await setTheme(_theme);
 
     if (enableGyroscope) {
@@ -232,6 +238,7 @@ class CornholeGame extends FlameGame with PanDetector {
 
   @override
   void onRemove() {
+    AssetRegistryService.instance.swapRevision.removeListener(_handleRegistrySwap);
     _gyroSubscription?.cancel();
     super.onRemove();
   }
@@ -243,19 +250,31 @@ class CornholeGame extends FlameGame with PanDetector {
     }
 
     final registry = AssetRegistryService.instance;
-    registry.hydrateSeedCatalog();
+    if (!registry.isHydrated) {
+      registry.hydrateSeedCatalog();
+    }
     final bgCdnUrl = registry.resolveThemePartUrl(newTheme.name, 'background');
     final boardCdnUrl = registry.resolveThemePartUrl(newTheme.name, 'board');
     final bagCdnUrl = registry.resolveThemePartUrl(newTheme.name, 'bag');
 
-    try {
-      final bgImage = await registry.loadCdnImage(bgCdnUrl) ?? await images.load(assets.background);
-      final boardImage = await registry.loadCdnImage(boardCdnUrl) ?? await images.load(assets.board);
-      final bagImage = await registry.loadCdnImage(bagCdnUrl) ?? await images.load(assets.bag);
+    Future<ui.Image> loadPart(String cdnUrl, String bundledAsset) async {
+      return await registry.loadCdnImage(
+            cdnUrl,
+            timeout: const Duration(milliseconds: 1800),
+          ) ??
+          await images.load(bundledAsset);
+    }
 
-      background.sprite = Sprite(bgImage);
-      board.sprite = Sprite(boardImage);
-      bag.sprite = Sprite(bagImage);
+    try {
+      final loaded = await Future.wait([
+        loadPart(bgCdnUrl, assets.background),
+        loadPart(boardCdnUrl, assets.board),
+        loadPart(bagCdnUrl, assets.bag),
+      ]);
+
+      background.sprite = Sprite(loaded[0]);
+      board.sprite = Sprite(loaded[1]);
+      bag.sprite = Sprite(loaded[2]);
       _theme = newTheme;
     } catch (_) {
       // Keep the current sprites and theme when a replacement asset fails.

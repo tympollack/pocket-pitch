@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/painting.dart';
 
 /// Canonical `@digitalcanopy/assets` R2 CDN & Flame sprite adapter
 /// for Pocket Pitch (`app_scope: 'pocket-pitch'`).
@@ -158,6 +158,7 @@ class AssetRegistryService {
   ];
 
   final Map<String, PitchAssetOverride> _overrides = {};
+  final Map<String, PitchAssetOverride> _catalogEntries = {};
   final Map<String, String> _packOverrides = {};
   final ValueNotifier<int> swapRevision = ValueNotifier<int>(0);
   bool _hydrated = false;
@@ -166,6 +167,7 @@ class AssetRegistryService {
 
   void reset() {
     _overrides.clear();
+    _catalogEntries.clear();
     _packOverrides.clear();
     _hydrated = false;
     swapRevision.value++;
@@ -182,16 +184,20 @@ class AssetRegistryService {
     swapRevision.value++;
   }
 
-  bool hasOverride(String key) => _overrides.containsKey(key.trim());
+  bool hasOverride(String key) {
+    final cleanKey = key.trim();
+    return _overrides.containsKey(cleanKey) || _catalogEntries.containsKey(cleanKey);
+  }
 
   void loadCatalog(List<PitchCatalogAsset> assets, {String? scope}) {
     final filtered = scope == null
         ? assets
         : assets.where((a) => a.appScope == scope || a.appScope == 'all');
+    _catalogEntries.clear();
     for (final asset in filtered) {
       final cleanKey = asset.assetKey.trim();
       if (cleanKey.isEmpty) continue;
-      _overrides[cleanKey] = PitchAssetOverride(
+      _catalogEntries[cleanKey] = PitchAssetOverride(
         url: asset.cdnUrl,
         metadata: asset.metadata,
       );
@@ -208,7 +214,8 @@ class AssetRegistryService {
   }
 
   String resolveUrl(String key, {String fallbackUrl = ''}) {
-    return _overrides[key.trim()]?.url ?? fallbackUrl;
+    final cleanKey = key.trim();
+    return _overrides[cleanKey]?.url ?? _catalogEntries[cleanKey]?.url ?? fallbackUrl;
   }
 
   String resolveAssetUrl(String pack, String assetPath, {String ext = 'png'}) {
@@ -231,6 +238,12 @@ class AssetRegistryService {
     if (packBase != null) {
       return '$packBase/$finalPath';
     }
+    if (_catalogEntries.containsKey(bareKey)) {
+      return _catalogEntries[bareKey]!.url;
+    }
+    if (_catalogEntries.containsKey(cleanPath)) {
+      return _catalogEntries[cleanPath]!.url;
+    }
     return '$cdnBaseUrl/$cleanPack/$finalPath';
   }
 
@@ -241,12 +254,18 @@ class AssetRegistryService {
     if (_overrides.containsKey(catalogKey)) {
       return _overrides[catalogKey]!.url;
     }
+    if (_packOverrides.containsKey('pocket-pitch')) {
+      return resolveAssetUrl('pocket-pitch', '$cleanTheme/$cleanPart');
+    }
+    if (_catalogEntries.containsKey(catalogKey)) {
+      return _catalogEntries[catalogKey]!.url;
+    }
     return resolveAssetUrl('pocket-pitch', '$cleanTheme/$cleanPart');
   }
 
   PitchFlameSpriteData? resolveFlameUiSpriteData(String frameKey) {
     final cleanKey = frameKey.trim();
-    final override = _overrides[cleanKey];
+    final override = _overrides[cleanKey] ?? _catalogEntries[cleanKey];
     final frame = override?.frame ?? uiAtlasFrames[cleanKey];
     if (frame == null) return null;
 
@@ -258,23 +277,54 @@ class AssetRegistryService {
     );
   }
 
+  String resolveUiAtlasUrl() {
+    return resolveAssetUrl('ui-pack', 'ui-sprites-atlas');
+  }
+
   Future<ui.Image?> loadCdnImage(
     String url, {
     Future<ByteData> Function(String url)? byteLoader,
     Duration timeout = const Duration(seconds: 3),
   }) async {
     try {
-      final data = byteLoader != null
-          ? await byteLoader(url).timeout(timeout)
-          : await NetworkAssetBundle(Uri.parse(url)).load(url).timeout(timeout);
-      final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-      if (bytes.isEmpty) return null;
+      if (byteLoader != null) {
+        final data = await byteLoader(url).timeout(timeout);
+        final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        if (bytes.isEmpty) {
+          return null;
+        }
+        final codec = await ui.instantiateImageCodec(bytes);
+        final frame = await codec.getNextFrame();
+        return frame.image;
+      }
 
-      final completer = Completer<ui.Image>();
-      ui.decodeImageFromList(bytes, (img) {
-        if (!completer.isCompleted) completer.complete(img);
-      });
-      return await completer.future.timeout(timeout);
+      // NetworkImage uses browser fetch on Flutter Web and HttpClient on native platforms.
+      final provider = NetworkImage(url);
+      final stream = provider.resolve(ImageConfiguration.empty);
+      final completer = Completer<ui.Image?>();
+      late final ImageStreamListener listener;
+      listener = ImageStreamListener(
+        (ImageInfo info, bool _) {
+          stream.removeListener(listener);
+          if (!completer.isCompleted) {
+            completer.complete(info.image);
+          }
+        },
+        onError: (Object _, StackTrace? __) {
+          stream.removeListener(listener);
+          if (!completer.isCompleted) {
+            completer.complete(null);
+          }
+        },
+      );
+      stream.addListener(listener);
+      return await completer.future.timeout(
+        timeout,
+        onTimeout: () {
+          stream.removeListener(listener);
+          return null;
+        },
+      );
     } catch (_) {
       return null;
     }

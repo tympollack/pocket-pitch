@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
@@ -23,9 +24,37 @@ class GestureGuideComponent extends Component with HasGameReference<CornholeGame
   double _dragLastTime = 0.0;
   bool _isDragging = false;
   double _idleTime = 0.0;
+  ui.Image? _uiAtlasImage;
 
   PitchFlameSpriteData? get arrowGuideSpriteData =>
       AssetRegistryService.instance.resolveFlameUiSpriteData('icon-arrow-up');
+
+  Future<void> _loadUiAtlas() async {
+    final loaded = await AssetRegistryService.instance.loadCdnImage(
+      AssetRegistryService.instance.resolveUiAtlasUrl(),
+      timeout: const Duration(seconds: 2),
+    );
+    if (loaded != null) {
+      _uiAtlasImage = loaded;
+    }
+  }
+
+  void _handleSwapRevision() {
+    _loadUiAtlas();
+  }
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    AssetRegistryService.instance.swapRevision.addListener(_handleSwapRevision);
+    await _loadUiAtlas();
+  }
+
+  @override
+  void onRemove() {
+    AssetRegistryService.instance.swapRevision.removeListener(_handleSwapRevision);
+    super.onRemove();
+  }
 
   void onPanStart(Vector2 position, [double? timestamp]) {
     final now = timestamp ?? (DateTime.now().millisecondsSinceEpoch / 1000.0);
@@ -181,6 +210,42 @@ class GestureGuideComponent extends Component with HasGameReference<CornholeGame
     Color color, {
     double arrowWidth = 6.0,
   }) {
+    final delta = end - start;
+    final dir = delta.normalized();
+    final frameData = arrowGuideSpriteData;
+
+    if (_uiAtlasImage != null && frameData != null && frameData.srcSize.length == 2) {
+      final srcRect = Rect.fromLTWH(
+        frameData.srcPosition[0],
+        frameData.srcPosition[1],
+        frameData.srcSize[0],
+        frameData.srcSize[1],
+      );
+      final iconSize = arrowWidth * 5.0;
+      final headCenter = end - (dir * (iconSize * 0.35));
+      final angle = math.atan2(dir.y, dir.x) + (math.pi / 2);
+
+      // Stem line behind the sprite head
+      final stemPaint = Paint()
+        ..color = color
+        ..strokeWidth = arrowWidth
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+      canvas.drawLine(Offset(start.x, start.y), Offset(headCenter.x, headCenter.y), stemPaint);
+
+      canvas.save();
+      canvas.translate(headCenter.x, headCenter.y);
+      canvas.rotate(angle);
+      canvas.drawImageRect(
+        _uiAtlasImage!,
+        srcRect,
+        Rect.fromCenter(center: Offset.zero, width: iconSize, height: iconSize),
+        Paint()..colorFilter = ui.ColorFilter.mode(color, ui.BlendMode.modulate),
+      );
+      canvas.restore();
+      return;
+    }
+
     final paint = Paint()
       ..color = color
       ..strokeWidth = arrowWidth
@@ -191,7 +256,6 @@ class GestureGuideComponent extends Component with HasGameReference<CornholeGame
     canvas.drawLine(Offset(start.x, start.y), Offset(end.x, end.y), paint);
 
     // Chevron head
-    final dir = (end - start).normalized();
     final normal = Vector2(-dir.y, dir.x);
     final headSize = arrowWidth * 2.8;
 

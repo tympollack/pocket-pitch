@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocket_pitch/services/asset_registry_service.dart';
 
@@ -33,6 +35,12 @@ void main() {
         'https://custom-ip.sunshade.icu/ui/icon-arrow-up.png',
       );
 
+      registry.registerPackOverride('pocket-pitch', 'https://custom-ip.sunshade.icu/pp');
+      expect(
+        registry.resolveThemePartUrl('moon', 'bag'),
+        'https://custom-ip.sunshade.icu/pp/moon/bag.png',
+      );
+
       registry.registerOverride(
         'pitch-moon-board',
         const PitchAssetOverride(url: 'https://custom-ip.sunshade.icu/moon-board-hd.png'),
@@ -51,6 +59,21 @@ void main() {
       expect(arrow!.srcPosition, [1536.0, 0.0]);
       expect(arrow.srcSize, [128.0, 128.0]);
       expect(arrow.anchor, [0.5, 0.5]);
+    });
+
+    test('fails fast returning null on empty or invalid image bytes', () async {
+      final registry = AssetRegistryService.create();
+      final empty = await registry.loadCdnImage(
+        'https://cdn.sunshade.icu/assets/kenney/empty.png',
+        byteLoader: (_) async => ByteData(0),
+      );
+      final corrupt = await registry.loadCdnImage(
+        'https://cdn.sunshade.icu/assets/kenney/corrupt.png',
+        byteLoader: (_) async => ByteData.sublistView(Uint8List.fromList([9, 8, 7])),
+        timeout: const Duration(seconds: 5),
+      );
+      expect(empty, isNull);
+      expect(corrupt, isNull);
     });
   });
 }
